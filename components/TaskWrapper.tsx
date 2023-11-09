@@ -8,26 +8,28 @@ import { useTaskContext } from '../context/TaskContext';
 const TaskWrapper: React.FC = () => {
     const { taskItems, setTaskItems } = useTaskContext()
     let [completeCounter, setCompleteCounter] = useState<number>(0)
-    const [draggingIndex, setDraggingIndex] = useState(-1)
+    const [dragging, setDragging] = useState(false);
 
-    const panResponder = useRef(
+    const panResponder = React.useRef(
         PanResponder.create({
-            onStartShouldSetPanResponder: (evt, gestureState) => true,
-            onStartShouldSetPanResponderCapture: (evt, gestureState) => true,
             onMoveShouldSetPanResponder: (evt, gestureState) => true,
+            onPanResponderGrant: () => {},
             onMoveShouldSetPanResponderCapture: (evt, gestureState) => true,
             onPanResponderMove: (_, gestureState) => {
-                const newTask = [...taskItems]
-                const draggedItem = newTask[draggingIndex as number]
-                newTask.splice(draggingIndex as number, 1)
-                const newIndex = Math.max(0, Math.min(newTask.length, draggingIndex as number + Math.round(gestureState.dy / 60)))
-                newTask.splice(newIndex, 0, draggedItem);
-                setDraggingIndex(newIndex)
-                setTaskItems(newTask)
+                setDragging(true)
+                const dragIndex = Math.floor(gestureState.y0 / 60)
+                const hoverIndex = Math.floor(gestureState.moveY / 60)
+        
+                if (dragIndex !== hoverIndex) {
+                    const newOrder = [...taskItems]
+                    const [draggedItem] = newOrder.splice(dragIndex, 1)
+                    newOrder.splice(hoverIndex, 0, draggedItem)
+                    setTaskItems(newOrder)
+                }
             },
             onPanResponderTerminationRequest: (evt, gestureState) => false,
             onPanResponderRelease: () => {
-                setDraggingIndex(-1)
+                setDragging(false)
             },
         })
     ).current
@@ -64,31 +66,17 @@ const TaskWrapper: React.FC = () => {
                 <View style={ styles.items }>
                 {
                     taskItems.map((item, index) => {
-                        console.log(item)
                         return (
-                            // <TouchableOpacity key={ index } onPress={ () => setDraggingIndex(index) }>
-                            //     <View
-                            //         style={ [styles.draggableItem, draggingIndex === index && styles.draggingItem] }
-                            //         {...panResponder.panHandlers}
-                            //     >
-                            //         <Task 
-                            //             key={ index } 
-                            //             taskName={ item.taskName } 
-                            //             index={ index } 
-                            //             taskCompleted = { item.completedTask }
-                            //             deleteTask={ () => deleteTask(index) }
-                            //             completeTask={ () => completeTask(index) }
-                            //         />
-                            //     </View>
-                            // </TouchableOpacity>
-                            <Task 
-                                key={ index } 
-                                taskName={ item.taskName } 
-                                index={ index } 
-                                taskCompleted = { item.completedTask }
-                                deleteTask={ () => deleteTask(index) }
-                                completeTask={ () => completeTask(index) }
-                            />
+                            <TouchableOpacity key={ index } {...panResponder.panHandlers}>
+                                    <Task 
+                                        key={ index } 
+                                        taskName={ item.taskName } 
+                                        index={ index } 
+                                        taskCompleted = { item.completedTask }
+                                        deleteTask={ () => deleteTask(index) }
+                                        completeTask={ () => completeTask(index) }
+                                    />
+                            </TouchableOpacity>
                         )
 
                     })
@@ -127,14 +115,6 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 20,
         fontWeight: 'bold',
-    },
-
-    draggableItem: {
-        marginBottom: 8,
-    },
-    
-    draggingItem: {
-        opacity: 0.7,
     },
 });
 
